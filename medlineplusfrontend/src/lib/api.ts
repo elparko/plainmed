@@ -1,18 +1,15 @@
 // Get the API URL from environment variables with fallback
-const API_URL = process.env.VITE_API_URL || (
-  process.env.NODE_ENV === 'production' 
-    ? 'https://api.plainmed.vercel.app'  // Update this to your actual API domain
-    : 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.PROD 
+    ? 'https://plainmed.vercel.app/api'  // Update this to your actual production API URL
+    : 'http://localhost:3000/api'
 );
 
 // Add a helper function for API calls
 async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
   try {
-    // Add a trailing slash to the API_URL if needed
-    const baseUrl = API_URL.endsWith('/') ? API_URL : `${API_URL}/`;
-    const fullUrl = url.startsWith('/api') 
-      ? url.replace('/api', baseUrl)
-      : `${baseUrl}${url}`;
+    // Remove any double slashes in the URL except after http(s):
+    const fullUrl = `${API_URL}/${url.replace(/^\/+/, '')}`.replace(/([^:]\/)\/+/g, '$1');
     
     console.log('Making API request to:', fullUrl);
     

@@ -5,31 +5,33 @@ require('dotenv').config();
 
 const app = express();
 
-// CORS configuration
+// Improved CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
     ? [
         'https://plainmed.vercel.app',
         'https://www.plainmed.vercel.app',
-        process.env.PRODUCTION_URL,
+        process.env.FRONTEND_URL,
       ].filter(Boolean)
-    : 'http://localhost:5173',
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
-  maxAge: 86400
+  optionsSuccessStatus: 200
 };
 
 // Apply middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 // Global middleware for API routes
 app.use('/api', (req, res, next) => {
-  // Log incoming requests
-  console.log(`${req.method} ${req.url}`);
-  
-  // Set headers
   res.set({
     'Content-Type': 'application/json',
     'Cache-Control': 'no-store',
@@ -39,10 +41,29 @@ app.use('/api', (req, res, next) => {
 });
 
 // Initialize Supabase client
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+  console.error('Missing Supabase environment variables');
+  process.exit(1);
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
+
+// Test database connection on startup
+async function testDatabaseConnection() {
+  try {
+    const { data, error } = await supabase.from('survey_responses').select('count').limit(1);
+    if (error) throw error;
+    console.log('Database connection successful');
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    process.exit(1);
+  }
+}
+
+testDatabaseConnection();
 
 // API Routes
 app.get('/api/personal-info/:userId', async (req, res) => {
