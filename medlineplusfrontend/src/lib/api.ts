@@ -154,6 +154,7 @@ export const initializeUser = async (userId: string, email: string) => {
 
 export async function getPersonalInfo(userId: string): Promise<PersonalInfo | null> {
   try {
+    console.log('Fetching personal info for user:', userId);
     const response = await fetch(`${API_URL}/personal-info/${userId}`, {
       method: 'GET',
       headers: {
@@ -163,30 +164,32 @@ export async function getPersonalInfo(userId: string): Promise<PersonalInfo | nu
       credentials: 'include',
     });
 
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
+    const contentType = response.headers.get('content-type');
+    console.log('Response content type:', contentType);
+
+    if (!response.ok || !contentType?.includes('application/json')) {
       let errorMessage = '';
-      
-      if (contentType?.includes('application/json')) {
-        const errorData = await response.json();
-        errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
-      } else {
-        errorMessage = await response.text();
-        console.error('Unexpected response:', errorMessage);
-        throw new Error('Server returned invalid response format');
+      try {
+        if (contentType?.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+        } else {
+          errorMessage = await response.text();
+          console.error('Unexpected response:', errorMessage);
+        }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : 'Failed to parse error response';
+        throw new Error(errorMessage);
       }
-      
       throw new Error(errorMessage);
     }
 
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      throw new Error(`Expected JSON response but got ${contentType}`);
-    }
-
     const result: PersonalInfoResponse = await response.json();
+    console.log('Personal info response:', result);
     return result.data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error getting personal info:', error);
     throw new Error('Failed to fetch personal info');
   }

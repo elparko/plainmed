@@ -2,8 +2,10 @@ const app = require('./handler');
 const express = require('express');
 const path = require('path');
 
-// Error handling middleware should be after routes but before static files
-app.use('/api', (err, req, res, next) => {
+// API routes are defined in handler.js and mounted first
+
+// Error handling middleware for API routes
+app.use('/api/*', (err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
     error: 'Internal Server Error',
@@ -11,15 +13,15 @@ app.use('/api', (err, req, res, next) => {
   });
 });
 
-// Handle production
+// Handle production AFTER API routes
 if (process.env.NODE_ENV === 'production') {
   // Static folder
   app.use(express.static(path.join(__dirname, '../dist')));
 
-  // Handle SPA - this should be last
-  app.get('*', (req, res) => {
-    // Don't handle API routes here
-    if (req.path.startsWith('/api/')) {
+  // Handle SPA - this must be LAST
+  app.get('/*', (req, res, next) => {
+    // Skip API routes
+    if (req.url.startsWith('/api/')) {
       return next();
     }
     res.sendFile(path.join(__dirname, '../dist/index.html'));
