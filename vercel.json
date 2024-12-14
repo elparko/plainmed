@@ -5,7 +5,7 @@
       "src": "medlineplusfrontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "medlineplusfrontend/dist",
+        "distDir": "dist",
         "buildCommand": "cd medlineplusfrontend && npm install && npm run build"
       }
     }
@@ -13,15 +13,18 @@
   "routes": [
     {
       "src": "/assets/(.*)",
-      "dest": "/medlineplusfrontend/dist/assets/$1"
+      "dest": "/assets/$1"
     },
     {
       "src": "/logo.svg",
-      "dest": "/medlineplusfrontend/dist/logo.svg"
+      "dest": "/logo.svg"
+    },
+    {
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/medlineplusfrontend/dist/index.html"
+      "dest": "/index.html"
     }
   ]
 } 
