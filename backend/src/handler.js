@@ -10,9 +10,17 @@ app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://plainmed.vercel.app']
     : ['http://localhost:5173'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization']
 }));
 app.use(express.json());
+
+// Add content-type middleware for API routes
+app.use('/api', (req, res, next) => {
+  res.type('application/json');
+  next();
+});
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -41,40 +49,37 @@ if (process.env.NODE_ENV === 'production') {
 async function performSearch(query, language, n_results) {
   console.log(`Searching for query: ${query} in language: ${language}`);
 
-  const { data, error } = await supabase
-    .from('MEDLINEPLUS')
-    .select(`
-      topic_id,
-      title,
-      title_es,
-      language,
-      url,
-      meta_desc,
-      full_summary,
-      aliases,
-      mesh_headings,
-      groups,
-      primary_institute,
-      date_created
-    `)
-    .ilike('title', `%${query}%`)
-    .eq('language', language)
-    .limit(n_results);
-
-  if (error) throw error;
-
-  if (data.length === 0) {
-    const { data: sample } = await supabase
+  try {
+    const { data, error } = await supabase
       .from('MEDLINEPLUS')
-      .select('*')
-      .limit(5);
-    console.log('Sample of database contents:', sample);
-  }
+      .select(`
+        topic_id,
+        title,
+        title_es,
+        language,
+        url,
+        meta_desc,
+        full_summary,
+        aliases,
+        mesh_headings,
+        groups,
+        primary_institute,
+        date_created
+      `)
+      .ilike('title', `%${query}%`)
+      .eq('language', language)
+      .limit(n_results);
 
-  return {
-    source: 'supabase',
-    results: data
-  };
+    if (error) throw error;
+
+    return {
+      source: 'supabase',
+      results: data || []
+    };
+  } catch (error) {
+    console.error('Supabase search error:', error);
+    throw error;
+  }
 }
 
 // Routes
@@ -179,9 +184,13 @@ app.get('/api/search', async (req, res) => {
     
     const results = await performSearch(query, language, parseInt(n_results));
     
+    // Explicitly set content type
+    res.contentType('application/json');
     res.json(results);
   } catch (error) {
     console.error('Search error:', error);
+    // Ensure error response is also JSON
+    res.contentType('application/json');
     res.status(500).json({ 
       error: 'Failed to perform search',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

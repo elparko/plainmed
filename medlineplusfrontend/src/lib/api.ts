@@ -33,6 +33,9 @@ export const searchMedicalConditions = async (query: string, language: string = 
       credentials: 'include',
     });
     
+    console.log('Search response status:', response.status);
+    console.log('Search response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
       if (response.status === 404) {
         return { results: [] };
@@ -43,15 +46,22 @@ export const searchMedicalConditions = async (query: string, language: string = 
     }
     
     const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
+    console.log('Response content type:', contentType);
+    
+    if (contentType && !contentType.toLowerCase().includes('json')) {
       console.error('Invalid content type:', contentType);
+      const responseText = await response.text();
+      console.error('Response body:', responseText);
       throw new Error('Invalid response format from server');
     }
     
-    return await response.json();
+    const data = await response.json();
+    return {
+      results: Array.isArray(data.results) ? data.results : []
+    };
   } catch (error) {
     console.error('Error searching conditions:', error);
-    throw error;
+    return { results: [] };
   }
 };
 
