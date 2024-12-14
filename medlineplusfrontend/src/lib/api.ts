@@ -15,6 +15,10 @@ interface PersonalInfoResponse {
 
 export const searchMedicalConditions = async (query: string, language: string = 'English', n_results: number = 5) => {
   try {
+    if (!query) {
+      return { results: [] };
+    }
+
     const queryParams = new URLSearchParams({
       query,
       language,
@@ -24,16 +28,24 @@ export const searchMedicalConditions = async (query: string, language: string = 
     const response = await fetch(`${API_URL}/search?${queryParams}`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
       credentials: 'include',
     });
     
     if (!response.ok) {
+      if (response.status === 404) {
+        return { results: [] };
+      }
       const errorText = await response.text();
       console.error('Search failed:', response.status, errorText);
       throw new Error(`Search failed: ${response.status} ${errorText}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('Invalid content type:', contentType);
+      throw new Error('Invalid response format from server');
     }
     
     return await response.json();

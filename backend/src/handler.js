@@ -37,6 +37,46 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Add this function at the top of the file, after the Supabase initialization
+async function performSearch(query, language, n_results) {
+  console.log(`Searching for query: ${query} in language: ${language}`);
+
+  const { data, error } = await supabase
+    .from('MEDLINEPLUS')
+    .select(`
+      topic_id,
+      title,
+      title_es,
+      language,
+      url,
+      meta_desc,
+      full_summary,
+      aliases,
+      mesh_headings,
+      groups,
+      primary_institute,
+      date_created
+    `)
+    .ilike('title', `%${query}%`)
+    .eq('language', language)
+    .limit(n_results);
+
+  if (error) throw error;
+
+  if (data.length === 0) {
+    const { data: sample } = await supabase
+      .from('MEDLINEPLUS')
+      .select('*')
+      .limit(5);
+    console.log('Sample of database contents:', sample);
+  }
+
+  return {
+    source: 'supabase',
+    results: data
+  };
+}
+
 // Routes
 app.get('/api', (req, res) => {
   res.json({ message: 'Medical History Search API' });
@@ -133,13 +173,19 @@ app.get('/api/search', async (req, res) => {
   try {
     const { query, language = 'English', n_results = 5 } = req.query;
     
-    // Your search logic here
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+    
     const results = await performSearch(query, language, parseInt(n_results));
     
     res.json(results);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: 'Failed to perform search' });
+    res.status(500).json({ 
+      error: 'Failed to perform search',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
