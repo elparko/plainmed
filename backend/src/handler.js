@@ -5,20 +5,26 @@ require('dotenv').config();
 
 const app = express();
 
-// Middleware
-app.use(cors({
+// Move CORS configuration before other middleware
+const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://plainmed.vercel.app']
-    : ['http://localhost:5173'],
+    ? 'https://plainmed.vercel.app'
+    : 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization']
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
-// Add content-type middleware for API routes
+// Global middleware to ensure JSON responses for API routes
 app.use('/api', (req, res, next) => {
-  res.type('application/json');
+  res.set({
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+    'Pragma': 'no-cache'
+  });
   next();
 });
 
@@ -89,64 +95,30 @@ app.get('/api', (req, res) => {
 
 app.get('/api/personal-info/:userId', async (req, res) => {
   const { userId } = req.params;
-  console.log(`Received request for user ${userId}`);
+  console.log(`Fetching personal info for user ${userId}`);
   
   try {
-    // First, check if user is initialized
-    const { data: existingData, error: checkError } = await supabase
-      .from('survey_responses')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('survey_type', 'personal_info');
-
-    if (checkError) {
-      console.error('Error checking user:', checkError);
-      throw checkError;
-    }
-
-    // If no row exists, initialize one
-    if (!existingData || existingData.length === 0) {
-      console.log('Initializing user survey response...');
-      const { error: initError } = await supabase
-        .from('survey_responses')
-        .insert({
-          user_id: userId,
-          survey_type: 'personal_info',
-          response: null
-        });
-
-      if (initError) {
-        console.error('Error initializing user:', initError);
-        throw initError;
-      }
-    }
-
-    // Now get the data (either existing or newly initialized)
     const { data, error } = await supabase
       .from('survey_responses')
       .select('*')
       .eq('user_id', userId)
-      .eq('survey_type', 'personal_info');
+      .eq('survey_type', 'personal_info')
+      .single();
 
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-
-    console.log('Raw data from database:', data);
-    const personalInfo = data && data.length > 0 ? data[0] : null;
-    console.log('Personal info response:', personalInfo?.response);
+    if (error) throw error;
 
     const response = {
-      hasCompletedForm: !!(personalInfo?.response),
-      data: personalInfo?.response || null
+      hasCompletedForm: !!data?.response,
+      data: data?.response || null
     };
-    console.log('Sending response:', response);
 
     res.json(response);
   } catch (error) {
     console.error('Error getting personal info:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: 'Failed to fetch personal info',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

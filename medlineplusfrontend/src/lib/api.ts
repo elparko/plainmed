@@ -157,22 +157,31 @@ export async function getPersonalInfo(userId: string): Promise<PersonalInfo | nu
     const response = await fetch(`${API_URL}/personal-info/${userId}`, {
       method: 'GET',
       headers: {
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
       credentials: 'include',
     });
 
     if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
-      try {
+      const contentType = response.headers.get('content-type');
+      let errorMessage = '';
+      
+      if (contentType?.includes('application/json')) {
         const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch {
-        const errorText = await response.text();
-        errorMessage = errorText || errorMessage;
+        errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      } else {
+        errorMessage = await response.text();
+        console.error('Unexpected response:', errorMessage);
+        throw new Error('Server returned invalid response format');
       }
-      console.error('Server response:', errorMessage);
+      
       throw new Error(errorMessage);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      throw new Error(`Expected JSON response but got ${contentType}`);
     }
 
     const result: PersonalInfoResponse = await response.json();

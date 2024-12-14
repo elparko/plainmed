@@ -61,14 +61,14 @@ export function PersonalInfoForm({ onNext, initialData }: PersonalInfoFormProps)
         }
       } catch (error) {
         console.error('Error checking personal info:', error)
-        toast.error('Error checking personal info')
+        toast.error('Error loading personal information. Please try again.')
       } finally {
         setIsLoading(false)
       }
     }
 
     checkPersonalInfo()
-  }, [user, getSurveyResponse, initialData])
+  }, [user, getSurveyResponse, initialData, form])
 
   async function onSubmit(values: PersonalInfoData) {
     setIsSaving(true)
