@@ -15,14 +15,19 @@ interface PersonalInfoResponse {
 
 export const searchMedicalConditions = async (query: string, language: string = 'English', n_results: number = 5) => {
   try {
-    const response = await fetch(`${API_URL}/search`, {
-      method: 'POST',
+    const queryParams = new URLSearchParams({
+      query,
+      language,
+      n_results: n_results.toString()
+    }).toString();
+
+    const response = await fetch(`${API_URL}/search?${queryParams}`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
       credentials: 'include',
-      body: JSON.stringify({ query, language, n_results }),
     });
     
     if (!response.ok) {

@@ -7,28 +7,10 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: (origin, callback) => {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'https://plainmed.vercel.app'
-    ];
-    
-    // Allow any Vercel preview deployments
-    const isVercelPreview = origin && 
-      (origin.endsWith('.vercel.app') || 
-       origin.includes('-elparkos-projects.vercel.app'));
-    
-    if (!origin || allowedOrigins.includes(origin) || isVercelPreview) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://plainmed.vercel.app']
+    : ['http://localhost:5173'],
+  credentials: true
 }));
 app.use(express.json());
 
@@ -147,47 +129,17 @@ app.post('/api/personal-info', async (req, res) => {
   }
 });
 
-app.post('/api/search', async (req, res) => {
+app.get('/api/search', async (req, res) => {
   try {
-    const { query, n_results = 5, language = 'English' } = req.body;
-    console.log(`Searching for query: ${query} in language: ${language}`);
-
-    const { data, error } = await supabase
-      .from('MEDLINEPLUS')
-      .select(`
-        topic_id,
-        title,
-        language,
-        url,
-        meta_desc,
-        full_summary,
-        aliases,
-        mesh_headings,
-        groups,
-        primary_institute,
-        date_created
-      `)
-      .ilike('title', `%${query}%`)
-      .eq('language', language)
-      .limit(n_results);
-
-    if (error) throw error;
-
-    if (data.length === 0) {
-      const { data: sample } = await supabase
-        .from('MEDLINEPLUS')
-        .select('*')
-        .limit(5);
-      console.log('Sample of database contents:', sample);
-    }
-
-    res.json({
-      source: 'supabase',
-      results: data
-    });
+    const { query, language = 'English', n_results = 5 } = req.query;
+    
+    // Your search logic here
+    const results = await performSearch(query, language, parseInt(n_results));
+    
+    res.json(results);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to perform search' });
   }
 });
 
