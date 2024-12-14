@@ -2,8 +2,11 @@ const app = require('./handler');
 const express = require('express');
 const path = require('path');
 
-// API error handling middleware - should be first
-app.use('/api/*', (err, req, res, next) => {
+// Create a new router for API routes
+const apiRouter = express.Router();
+
+// API error handling middleware
+apiRouter.use((err, req, res, next) => {
   console.error('API Error:', err);
   res.status(500).json({ 
     error: 'Internal Server Error',
@@ -12,17 +15,18 @@ app.use('/api/*', (err, req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+apiRouter.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API routes logger - should be before static files
-app.use('/api', (req, res, next) => {
+// API routes logger
+apiRouter.use((req, res, next) => {
   console.log('API request:', {
     method: req.method,
     url: req.url,
     origin: req.headers.origin,
-    path: req.path
+    path: req.path,
+    fullUrl: req.protocol + '://' + req.get('host') + req.originalUrl
   });
   next();
 });
@@ -30,9 +34,8 @@ app.use('/api', (req, res, next) => {
 // Production setup
 console.log('Running in production mode');
 
-// IMPORTANT: Handle API routes from handler.js BEFORE static files
-// This ensures API routes are not intercepted by the static file handler
-app.use('/api', app._router);
+// Mount API routes at /api
+app.use('/api', apiRouter);
 
 // After API routes, serve static files
 app.use(express.static(path.join(__dirname, '../dist')));

@@ -3,7 +3,7 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
-const app = express();
+const router = express.Router();
 
 // Production CORS configuration
 const corsOptions = {
@@ -18,19 +18,19 @@ const corsOptions = {
 };
 
 // Apply middleware
-app.use(cors(corsOptions));
-app.use(express.json());
+router.use(cors(corsOptions));
+router.use(express.json());
 
 // Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+router.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
   console.log('Origin:', req.headers.origin);
   console.log('Headers:', req.headers);
   next();
 });
 
 // Global middleware for API routes
-app.use((req, res, next) => {
+router.use((req, res, next) => {
   // Ensure JSON content type for all API responses
   res.set({
     'Content-Type': 'application/json',
@@ -68,12 +68,12 @@ async function testDatabaseConnection() {
 testDatabaseConnection();
 
 // Root endpoint
-app.get('/api', (req, res) => {
-  res.json({ message: "Medical History Search API" });
+router.get('/', (req, res) => {
+  return res.json({ message: "Medical History Search API" });
 });
 
 // Search endpoint
-app.get('/api/search', async (req, res) => {
+router.get('/search', async (req, res) => {
   try {
     const { query, language = 'English', n_results = 5 } = req.query;
     console.log('Search request:', { query, language, n_results });
@@ -122,7 +122,7 @@ app.get('/api/search', async (req, res) => {
 });
 
 // Personal info endpoints
-app.get('/api/personal-info/:userId', async (req, res) => {
+router.get('/personal-info/:userId', async (req, res) => {
   const { userId } = req.params;
   console.log(`Fetching personal info for user ${userId}`);
   
@@ -152,7 +152,7 @@ app.get('/api/personal-info/:userId', async (req, res) => {
   }
 });
 
-app.post('/api/personal-info', async (req, res) => {
+router.post('/personal-info', async (req, res) => {
   const { user_id, ageRange, gender, language } = req.body;
   
   if (!user_id) {
@@ -187,7 +187,7 @@ app.post('/api/personal-info', async (req, res) => {
 });
 
 // Test endpoints
-app.get('/api/test-db', async (req, res) => {
+router.get('/test-db', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('MEDLINEPLUS')
@@ -212,16 +212,20 @@ app.get('/api/test-db', async (req, res) => {
 });
 
 // Options endpoint for CORS preflight
-app.options('/api/search', (req, res) => {
-  res.json({ message: 'OK' });
+router.options('/search', (req, res) => {
+  return res.json({ message: 'OK' });
 });
 
+// Create an Express app to handle the router
+const app = express();
+app.use('/', router);
+
 // 404 handler for API routes
-app.use('/api/*', (req, res) => {
-  console.log('API 404:', req.method, req.url);
+app.use('*', (req, res) => {
+  console.log('API 404:', req.method, req.originalUrl);
   return res.status(404).json({ 
     error: 'API endpoint not found',
-    path: req.url,
+    path: req.originalUrl,
     method: req.method
   });
 });
