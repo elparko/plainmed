@@ -7,12 +7,17 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://plainmed.vercel.app'
+  origin: process.env.NODE_ENV === 'production'
+    ? [
+        'https://plainmed.vercel.app',
+        'https://www.plainmed.vercel.app',
+        process.env.PRODUCTION_URL,
+      ].filter(Boolean)
     : 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Accept', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+  maxAge: 86400
 };
 
 // Apply middleware
@@ -75,6 +80,40 @@ app.get('/api/personal-info/:userId', async (req, res) => {
     console.error('Error getting personal info:', error);
     res.status(500).json({ 
       error: 'Failed to fetch personal info',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+app.post('/api/personal-info', async (req, res) => {
+  const { user_id, ageRange, gender, language } = req.body;
+  
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id is required' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('survey_responses')
+      .upsert({
+        user_id,
+        survey_type: 'personal_info',
+        response: { ageRange, gender, language },
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
+    res.json(data.response);
+  } catch (error) {
+    console.error('Error saving personal info:', error);
+    res.status(500).json({ 
+      error: 'Failed to save personal info',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

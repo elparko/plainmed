@@ -1,6 +1,49 @@
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://plainmed.vercel.app/api'
-  : 'http://localhost:3000/api';
+const API_URL = process.env.VITE_API_URL || (
+  process.env.NODE_ENV === 'production' 
+    ? 'https://plainmed.vercel.app/api'
+    : 'http://localhost:3000/api'
+);
+
+// Add a helper function for API calls
+async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    const contentType = response.headers.get('content-type');
+    
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        if (contentType?.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          errorMessage = await response.text() || errorMessage;
+        }
+      } catch {
+        // If parsing fails, use the default error message
+      }
+      throw new Error(errorMessage);
+    }
+
+    if (!contentType?.includes('application/json')) {
+      throw new Error(`Expected JSON response but got ${contentType}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw error;
+  }
+}
 
 interface PersonalInfo {
   ageRange?: string;
@@ -155,38 +198,9 @@ export const initializeUser = async (userId: string, email: string) => {
 export async function getPersonalInfo(userId: string): Promise<PersonalInfo | null> {
   try {
     console.log('Fetching personal info for user:', userId);
-    const response = await fetch(`${API_URL}/personal-info/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
-
-    const contentType = response.headers.get('content-type');
-    console.log('Response content type:', contentType);
-
-    if (!response.ok || !contentType?.includes('application/json')) {
-      let errorMessage = '';
-      try {
-        if (contentType?.includes('application/json')) {
-          const errorData = await response.json();
-          errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
-        } else {
-          errorMessage = await response.text();
-          console.error('Unexpected response:', errorMessage);
-        }
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error 
-          ? error.message 
-          : 'Failed to parse error response';
-        throw new Error(errorMessage);
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result: PersonalInfoResponse = await response.json();
+    const result: PersonalInfoResponse = await fetchWithErrorHandling(
+      `${API_URL}/personal-info/${userId}`
+    );
     console.log('Personal info response:', result);
     return result.data;
   } catch (error: unknown) {
@@ -197,28 +211,10 @@ export async function getPersonalInfo(userId: string): Promise<PersonalInfo | nu
 
 export async function createPersonalInfo(data: { user_id: string } & PersonalInfo): Promise<PersonalInfo> {
   try {
-    const response = await fetch(`${API_URL}/personal-info`, {
+    return await fetchWithErrorHandling(`${API_URL}/personal-info`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
       body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch {
-        const errorText = await response.text();
-        errorMessage = errorText || errorMessage;
-      }
-      throw new Error(errorMessage);
-    }
-
-    return await response.json();
   } catch (error) {
     console.error('Error creating personal info:', error);
     throw error;
