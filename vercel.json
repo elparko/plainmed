@@ -2,14 +2,23 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/handler.js",
+      "src": "medlineplusfrontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
+    {
+      "src": "backend/src/handler.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "backend/src/handler.js"
+    },
+    {
       "src": "/(.*)",
-      "dest": "src/handler.js"
+      "dest": "medlineplusfrontend/dist/$1"
     }
   ]
 } 
