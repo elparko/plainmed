@@ -31,6 +31,7 @@ app.use((req, res, next) => {
 
 // Global middleware for API routes
 app.use((req, res, next) => {
+  // Ensure JSON content type for all API responses
   res.set({
     'Content-Type': 'application/json',
     'Cache-Control': 'no-store',
@@ -55,7 +56,7 @@ const supabase = createClient(
 // Test database connection on startup
 async function testDatabaseConnection() {
   try {
-    const { data, error } = await supabase.from('survey_responses').select('count').limit(1);
+    const { data, error } = await supabase.from('MEDLINEPLUS').select('count').limit(1);
     if (error) throw error;
     console.log('Database connection successful');
   } catch (error) {
@@ -66,7 +67,61 @@ async function testDatabaseConnection() {
 
 testDatabaseConnection();
 
-// API Routes - all routes should be prefixed with /api
+// Root endpoint
+app.get('/api', (req, res) => {
+  res.json({ message: "Medical History Search API" });
+});
+
+// Search endpoint
+app.get('/api/search', async (req, res) => {
+  try {
+    const { query, language = 'English', n_results = 5 } = req.query;
+    console.log('Search request:', { query, language, n_results });
+
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+
+    const { data, error } = await supabase
+      .from('MEDLINEPLUS')
+      .select(`
+        topic_id,
+        title,
+        language,
+        url,
+        meta_desc,
+        full_summary,
+        aliases,
+        mesh_headings,
+        groups,
+        primary_institute,
+        date_created
+      `)
+      .ilike('title', `%${query}%`)
+      .eq('language', language)
+      .limit(Number(n_results));
+
+    if (error) {
+      console.error('Supabase search error:', error);
+      throw error;
+    }
+
+    console.log(`Found ${data.length} results`);
+    return res.json({
+      source: 'supabase',
+      results: data
+    });
+
+  } catch (error) {
+    console.error('Search error:', error);
+    return res.status(500).json({
+      error: 'Failed to perform search',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Personal info endpoints
 app.get('/api/personal-info/:userId', async (req, res) => {
   const { userId } = req.params;
   console.log(`Fetching personal info for user ${userId}`);
@@ -84,22 +139,13 @@ app.get('/api/personal-info/:userId', async (req, res) => {
       throw error;
     }
 
-    // If no data exists, return empty response
-    if (!data) {
-      return res.json({
-        hasCompletedForm: false,
-        data: null
-      });
-    }
-
-    // Return the data
-    res.json({
-      hasCompletedForm: !!data.response,
-      data: data.response
+    return res.json({
+      hasCompletedForm: !!data,
+      data: data ? data.response : null
     });
   } catch (error) {
     console.error('Error getting personal info:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: 'Failed to fetch personal info',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -130,20 +176,50 @@ app.post('/api/personal-info', async (req, res) => {
       throw error;
     }
 
-    res.json(data.response);
+    return res.json(data.response);
   } catch (error) {
     console.error('Error saving personal info:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: 'Failed to save personal info',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
+// Test endpoints
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('MEDLINEPLUS')
+      .select('topic_id,title')
+      .limit(1);
+
+    if (error) throw error;
+
+    return res.json({
+      status: 'success',
+      connection: 'valid',
+      sample_data: data
+    });
+  } catch (error) {
+    console.error('Test DB error:', error);
+    return res.status(500).json({
+      status: 'error',
+      connection: 'invalid',
+      error: error.message
+    });
+  }
+});
+
+// Options endpoint for CORS preflight
+app.options('/api/search', (req, res) => {
+  res.json({ message: 'OK' });
+});
+
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
   console.log('API 404:', req.method, req.url);
-  res.status(404).json({ 
+  return res.status(404).json({ 
     error: 'API endpoint not found',
     path: req.url,
     method: req.method

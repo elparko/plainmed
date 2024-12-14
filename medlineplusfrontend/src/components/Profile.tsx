@@ -22,12 +22,21 @@ export function Profile() {
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const loadPersonalInfo = async () => {
-      if (!user) return
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
       setError(null)
       try {
+        console.log('Loading personal info for user:', {
+          userId: user.id,
+          retryCount,
+        })
         const data = await getPersonalInfo(user.id)
         console.log('Loaded personal info:', data)
         const formattedData: PersonalInfo = {
@@ -36,22 +45,33 @@ export function Profile() {
           language: data?.language || ''
         }
         setPersonalInfo(formattedData)
+        setError(null)
       } catch (error) {
         console.error('Error loading personal info:', error)
-        setError('Unable to load personal information. Please try again later.')
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+        setError(errorMessage)
         toast.error('Error loading personal information')
+        
+        // Retry up to 3 times with increasing delay
+        if (retryCount < 3) {
+          const delay = Math.pow(2, retryCount) * 1000 // Exponential backoff
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1)
+          }, delay)
+        }
       } finally {
         setLoading(false)
       }
     }
 
     loadPersonalInfo()
-  }, [user])
+  }, [user, retryCount])
 
   const handleEditComplete = async (data: PersonalInfo) => {
     if (!user) return
     
     try {
+      setError(null)
       // Save to database
       await createPersonalInfo({
         user_id: user.id,
@@ -64,24 +84,18 @@ export function Profile() {
       toast.success('Personal information updated')
     } catch (error) {
       console.error('Error saving personal info:', error)
-      toast.error('Failed to save personal information')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save personal information'
+      setError(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    )
-  }
-
-  if (error) {
+  if (!user) {
     return (
       <div className="flex flex-col items-center justify-center p-8 space-y-4">
-        <p className="text-red-500">{error}</p>
-        <Button onClick={() => window.location.reload()}>
-          Try Again
+        <p className="text-red-500">Please log in to view your profile</p>
+        <Button onClick={() => navigate('/login')}>
+          Go to Login
         </Button>
       </div>
     )
@@ -108,7 +122,7 @@ export function Profile() {
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle>Personal Information</CardTitle>
-              {!isEditing && (
+              {!isEditing && !loading && !error && (
                 <Button variant="outline" onClick={() => setIsEditing(true)}>
                   Edit
                 </Button>
@@ -116,7 +130,18 @@ export function Profile() {
             </div>
           </CardHeader>
           <CardContent>
-            {isEditing ? (
+            {loading ? (
+              <div className="flex justify-center items-center p-8">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                <p className="text-red-500">{error}</p>
+                <Button onClick={() => setRetryCount(prev => prev + 1)}>
+                  Try Again
+                </Button>
+              </div>
+            ) : isEditing ? (
               <PersonalInfoForm 
                 onNext={handleEditComplete}
                 initialData={personalInfo}
