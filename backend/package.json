@@ -1,0 +1,21 @@
+{
+  "name": "plainhealth-backend",
+  "version": "1.0.0",
+  "description": "PlainHealth API Backend",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "node-fetch": "^2.7.0"
+  }
+} 

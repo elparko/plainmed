@@ -1,0 +1,55 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.environments
+venv
+**/venv
+**/.venv
+.uv/
+**/.uv/
+
+# Environment variables
+.env
+.env.*
+
+# Dependencies
+node_modules
+**/node_modules
+package-lock.json
+uv.lock
+
+# Build directories
+dist
+build
+**/dist
+**/build
+
+# System files
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Large media files
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.zip
+*.tar.gz
+
+# Logs
+*.log
+logs/

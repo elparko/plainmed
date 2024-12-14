@@ -1,0 +1,17 @@
+| schemaname | tablename   | column_name            | data_type                |
+| ---------- | ----------- | ---------------------- | ------------------------ |
+| public     | MEDLINEPLUS | topic_id               | bigint                   |
+| public     | MEDLINEPLUS | title                  | text                     |
+| public     | MEDLINEPLUS | language               | text                     |
+| public     | MEDLINEPLUS | date_created           | text                     |
+| public     | MEDLINEPLUS | url                    | text                     |
+| public     | MEDLINEPLUS | meta_desc              | text                     |
+| public     | MEDLINEPLUS | full_summary           | text                     |
+| public     | MEDLINEPLUS | aliases                | jsonb                    |
+| public     | MEDLINEPLUS | mesh_headings          | jsonb                    |
+| public     | MEDLINEPLUS | groups                 | jsonb                    |
+| public     | MEDLINEPLUS | language_mapped_topics | jsonb                    |
+| public     | MEDLINEPLUS | other_languages        | jsonb                    |
+| public     | MEDLINEPLUS | see_references         | jsonb                    |
+| public     | MEDLINEPLUS | primary_institute      | jsonb                    |
+| public     | MEDLINEPLUS | sites                  | jsonb                    |

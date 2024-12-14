@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+**/node_modules
+package-lock.json
+
+# Python virtual environments
+venv
+.venv
+**/venv
+**/.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Build directories
+dist
+build
+**/dist
+**/build
+
+# System files
+.DS_Store
+**/.DS_Store
+
+# Environment files
+.env
+.env.*
+
+.vercel
