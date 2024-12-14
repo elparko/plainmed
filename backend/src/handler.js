@@ -7,7 +7,13 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:5173', 
+    'http://127.0.0.1:5173',
+    'https://plainmed.vercel.app',
+    'https://plainmed-b7g1qn6sv-elparkos-projects.vercel.app'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -24,6 +30,18 @@ const supabase = createClient(
 const debugLog = (req, msg) => {
   console.log(`[${req.method}] ${req.path} - ${msg}`);
 };
+
+// At the top of your routes
+if (process.env.NODE_ENV === 'production') {
+  app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ 
+      error: 'Internal Server Error',
+      // Only send detailed error messages in development
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
+  });
+}
 
 // Routes
 app.get('/api', (req, res) => {

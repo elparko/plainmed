@@ -1,5 +1,6 @@
-const DEV_API_URL = 'http://localhost:3000/api';
-const API_URL = import.meta.env.VITE_API_URL || DEV_API_URL;
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://plainmed-b7g1qn6sv-elparkos-projects.vercel.app/api'
+  : 'http://localhost:3000/api';
 
 interface PersonalInfo {
   ageRange?: string;
