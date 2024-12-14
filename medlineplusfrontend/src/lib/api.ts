@@ -13,15 +13,59 @@ interface PersonalInfoResponse {
   data: PersonalInfo | null;
 }
 
-export const searchMedicalConditions = async (query: string, language: string = 'English', n_results: number = 5) => {
+interface Disease {
+  name: string;
+  name_es?: string;
+  concept_id: string;
+  semantic_type: string;
+  sources: string;
+  meta_desc?: string;
+  full_summary?: string;
+  url?: string;
+  aliases?: string[];
+  mesh_headings?: string[];
+  groups?: string[];
+  primary_institute?: {
+    name: string;
+    url: string;
+  };
+}
+
+interface MedlinePlusResult {
+  topic_id: number;
+  title: string;
+  title_es?: string;
+  language?: string;
+  url?: string;
+  meta_desc?: string;
+  full_summary?: string;
+  aliases?: string[];
+  mesh_headings?: string[];
+  groups?: string[];
+  primary_institute?: {
+    name: string;
+    url: string;
+  };
+}
+
+interface SearchResponse {
+  results: MedlinePlusResult[];
+  source?: string;
+}
+
+export const searchMedicalConditions = async (
+  query: string, 
+  language: string = 'English', 
+  n_results: number = 5
+): Promise<{ results: Disease[] }> => {
   try {
     if (!query) {
       return { results: [] };
     }
 
     const params = new URLSearchParams({
-      query: encodeURIComponent(query),
-      language: encodeURIComponent(language),
+      query,
+      language,
       n_results: n_results.toString()
     });
 
@@ -49,20 +93,29 @@ export const searchMedicalConditions = async (query: string, language: string = 
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      console.error('Failed to parse JSON response:', parseError);
-      return { results: [] };
-    }
-
+    const data: SearchResponse = await response.json();
+    
     if (!data || !Array.isArray(data.results)) {
       console.error('Invalid response structure:', data);
       return { results: [] };
     }
 
-    return { results: data.results };
+    const formattedResults: Disease[] = data.results.map(result => ({
+      name: result.title,
+      name_es: result.title_es,
+      concept_id: result.topic_id.toString(),
+      semantic_type: 'MedlinePlus Topic',
+      sources: 'MedlinePlus',
+      meta_desc: result.meta_desc,
+      full_summary: result.full_summary,
+      url: result.url,
+      aliases: result.aliases,
+      mesh_headings: result.mesh_headings,
+      groups: result.groups,
+      primary_institute: result.primary_institute
+    }));
+
+    return { results: formattedResults };
   } catch (error) {
     console.error('Error searching conditions:', error);
     return { results: [] };
