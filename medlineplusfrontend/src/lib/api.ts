@@ -1,5 +1,5 @@
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://plainmed-b7g1qn6sv-elparkos-projects.vercel.app/api'
+  ? 'https://plainmed.vercel.app/api'
   : 'http://localhost:3000/api';
 
 interface PersonalInfo {
@@ -19,12 +19,16 @@ export const searchMedicalConditions = async (query: string, language: string = 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({ query, language, n_results }),
     });
     
     if (!response.ok) {
-      throw new Error('Search failed');
+      const errorText = await response.text();
+      console.error('Search failed:', response.status, errorText);
+      throw new Error(`Search failed: ${response.status} ${errorText}`);
     }
     
     return await response.json();
