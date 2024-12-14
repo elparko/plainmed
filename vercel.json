@@ -2,26 +2,25 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/src/handler.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "medlineplusfrontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist",
-        "buildCommand": "cd medlineplusfrontend && npm install && npm run build"
+        "distDir": "medlineplusfrontend/dist"
       }
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "backend/src/handler.js"
+      "src": "/assets/(.*)",
+      "dest": "medlineplusfrontend/dist/assets/$1"
+    },
+    {
+      "src": "/logo.svg",
+      "dest": "medlineplusfrontend/dist/logo.svg"
     },
     {
       "src": "/(.*)",
-      "dest": "medlineplusfrontend/dist/$1"
+      "dest": "medlineplusfrontend/dist/index.html"
     }
   ]
 } 
