@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { MedicalHistoryForm } from '@/components/MedicalHistoryForm'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useSurvey } from '@/contexts/SurveyContext'
 import { toast } from 'sonner'
 import { ChevronLeft } from 'lucide-react'
 
@@ -8,6 +9,7 @@ export function Survey() {
   const navigate = useNavigate()
   const location = useLocation()
   const { language } = useLanguage()
+  const { saveSurveyResponse } = useSurvey()
   
   const handleMedicalHistoryComplete = async (data: any) => {
     console.log('handleMedicalHistoryComplete called with data:', data);
