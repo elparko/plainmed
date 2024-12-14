@@ -5,18 +5,15 @@ require('dotenv').config();
 
 const app = express();
 
-// Improved CORS configuration
+// Production CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? [
-        'https://plainmed.vercel.app',
-        'https://www.plainmed.vercel.app',
-        process.env.FRONTEND_URL,
-      ].filter(Boolean)
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: [
+    'https://plainmed.vercel.app',
+    'https://www.plainmed.vercel.app'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Origin'],
   optionsSuccessStatus: 200
 };
 
@@ -27,6 +24,8 @@ app.use(express.json());
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Origin:', req.headers.origin);
+  console.log('Headers:', req.headers);
   next();
 });
 
@@ -35,7 +34,9 @@ app.use('/api', (req, res, next) => {
   res.set({
     'Content-Type': 'application/json',
     'Cache-Control': 'no-store',
-    'Pragma': 'no-cache'
+    'Pragma': 'no-cache',
+    'Access-Control-Allow-Origin': 'https://plainmed.vercel.app',
+    'Access-Control-Allow-Credentials': 'true'
   });
   next();
 });

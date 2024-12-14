@@ -17,41 +17,36 @@ app.get('/health', (req, res) => {
 });
 
 // Production setup
-if (process.env.NODE_ENV === 'production') {
-  console.log('Running in production mode');
-  
-  // Serve static files
-  app.use(express.static(path.join(__dirname, '../dist')));
-  
-  // Handle API routes first
-  app.use('/api', (req, res, next) => {
-    console.log('API request:', req.method, req.url);
+console.log('Running in production mode');
+
+// Serve static files
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Handle API routes first
+app.use('/api', (req, res, next) => {
+  console.log('API request:', req.method, req.url);
+  console.log('Origin:', req.headers.origin);
+  next();
+});
+
+// SPA catch-all route - must be last
+app.get('*', (req, res, next) => {
+  if (!req.url.startsWith('/api/')) {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  } else {
     next();
-  });
-  
-  // SPA catch-all route - must be last
-  app.get('*', (req, res, next) => {
-    if (!req.url.startsWith('/api/')) {
-      res.sendFile(path.join(__dirname, '../dist/index.html'));
-    } else {
-      next();
-    }
-  });
-}
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log('Environment:', process.env.NODE_ENV);
-  console.log('Frontend URL:', process.env.FRONTEND_URL);
-  console.log('Allowed Origins:', process.env.NODE_ENV === 'production' 
-    ? [
-        'https://plainmed.vercel.app',
-        'https://www.plainmed.vercel.app',
-        process.env.FRONTEND_URL,
-      ].filter(Boolean)
-    : ['http://localhost:5173', 'http://127.0.0.1:5173']
-  );
+  console.log('Environment: production');
+  console.log('Frontend URL: https://plainmed.vercel.app');
+  console.log('Allowed Origins:', [
+    'https://plainmed.vercel.app',
+    'https://www.plainmed.vercel.app'
+  ]);
 });
 
 // Handle server shutdown gracefully

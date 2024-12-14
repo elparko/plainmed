@@ -1,9 +1,15 @@
+// Debug current environment
+console.log('Environment:', {
+  PROD: import.meta.env.PROD,
+  DEV: import.meta.env.DEV,
+  BASE_URL: import.meta.env.BASE_URL,
+  API_URL: import.meta.env.VITE_API_URL,
+});
+
 // Get the API URL from environment variables with fallback
-const API_URL = import.meta.env.VITE_API_URL || (
-  import.meta.env.PROD 
-    ? 'https://plainmed.vercel.app/api'  // Update this to your actual production API URL
-    : 'http://localhost:3000/api'
-);
+const API_URL = 'https://plainmed.vercel.app/api';  // Production URL
+
+console.log('Using API URL:', API_URL);
 
 // Add a helper function for API calls
 async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
@@ -13,7 +19,12 @@ async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
     const baseUrl = API_URL.replace(/\/+$/, '');
     const fullUrl = `${baseUrl}/${endpoint}`;
     
-    console.log('Making API request to:', fullUrl);
+    console.log('Making API request to:', {
+      baseUrl,
+      endpoint,
+      fullUrl,
+      method: options.method || 'GET',
+    });
     
     const response = await fetch(fullUrl, {
       ...options,
@@ -21,13 +32,19 @@ async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'Origin': 'https://plainmed.vercel.app',  // Add explicit origin
         ...options.headers,
       },
     });
 
+    console.log('Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      url: response.url,
+    });
+
     const contentType = response.headers.get('content-type');
-    console.log('Response content type:', contentType);
-    console.log('Response status:', response.status);
     
     if (!response.ok) {
       let errorMessage = `HTTP error! status: ${response.status}`;
@@ -54,8 +71,13 @@ async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
     const data = await response.json();
     console.log('API response data:', data);
     return data;
-  } catch (error) {
-    console.error('API call failed:', error);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error('API call failed:', {
+      error,
+      message: error.message,
+      stack: error.stack,
+    });
     throw error;
   }
 }
@@ -127,39 +149,7 @@ export const searchMedicalConditions = async (
       n_results: n_results.toString()
     });
 
-    const url = `${API_URL}/search?${params}`;
-    console.log('Fetching from:', url);
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      let errorMessage = '';
-      
-      if (contentType?.includes('application/json')) {
-        const errorData = await response.json();
-        errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
-      } else {
-        errorMessage = await response.text();
-      }
-      
-      console.error('Server error:', errorMessage);
-      throw new Error(errorMessage);
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      throw new Error(`Expected JSON response but got ${contentType}`);
-    }
-
-    const data: SearchResponse = await response.json();
+    const data: SearchResponse = await fetchWithErrorHandling(`search?${params}`);
     
     if (!data || !Array.isArray(data.results)) {
       console.error('Invalid response structure:', data);
@@ -183,7 +173,8 @@ export const searchMedicalConditions = async (
 
     console.log('Formatted results:', formattedResults);
     return { results: formattedResults };
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err as Error;
     console.error('Error searching conditions:', error);
     return { results: [] };
   }
@@ -191,20 +182,12 @@ export const searchMedicalConditions = async (
 
 export const initializeUser = async (userId: string, email: string) => {
   try {
-    const response = await fetch(`${API_URL}/initialize-user`, {
+    return await fetchWithErrorHandling('initialize-user', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ user_id: userId, email }),
     });
-    
-    if (!response.ok) {
-      throw new Error('Failed to initialize user');
-    }
-    
-    return await response.json();
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err as Error;
     console.error('Error initializing user:', error);
     throw error;
   }
@@ -218,7 +201,8 @@ export async function getPersonalInfo(userId: string): Promise<PersonalInfo | nu
     );
     console.log('Personal info response:', result);
     return result.data;
-  } catch (error: unknown) {
+  } catch (err: unknown) {
+    const error = err as Error;
     console.error('Error getting personal info:', error);
     throw new Error('Failed to fetch personal info');
   }
@@ -230,7 +214,8 @@ export async function createPersonalInfo(data: { user_id: string } & PersonalInf
       method: 'POST',
       body: JSON.stringify(data),
     });
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err as Error;
     console.error('Error creating personal info:', error);
     throw error;
   }
