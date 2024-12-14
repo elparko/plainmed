@@ -7,13 +7,25 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:5173', 
-    'http://127.0.0.1:5173',
-    'https://plainmed.vercel.app',
-    'https://plainmed-b7g1qn6sv-elparkos-projects.vercel.app'
-  ],
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'https://plainmed.vercel.app'
+    ];
+    
+    // Allow any Vercel preview deployments
+    const isVercelPreview = origin && 
+      (origin.endsWith('.vercel.app') || 
+       origin.includes('-elparkos-projects.vercel.app'));
+    
+    if (!origin || allowedOrigins.includes(origin) || isVercelPreview) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
