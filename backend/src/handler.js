@@ -19,8 +19,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Ensure JSON responses for all API routes
+// Global middleware for API routes
 app.use('/api', (req, res, next) => {
+  // Log incoming requests
+  console.log(`${req.method} ${req.url}`);
+  
+  // Set headers
   res.set({
     'Content-Type': 'application/json',
     'Cache-Control': 'no-store',
@@ -42,33 +46,30 @@ app.get('/api/personal-info/:userId', async (req, res) => {
   
   try {
     // First try to get existing data
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('survey_responses')
       .select('*')
       .eq('user_id', userId)
       .eq('survey_type', 'personal_info')
       .single();
 
-    // If no data exists, create an initial record
-    if (!data && !error) {
-      const { data: newData, error: insertError } = await supabase
-        .from('survey_responses')
-        .insert({
-          user_id: userId,
-          survey_type: 'personal_info',
-          response: null
-        })
-        .single();
-
-      if (insertError) throw insertError;
-      data = newData;
-    } else if (error) {
+    if (error) {
+      console.error('Supabase error:', error);
       throw error;
     }
 
+    // If no data exists, return empty response
+    if (!data) {
+      return res.json({
+        hasCompletedForm: false,
+        data: null
+      });
+    }
+
+    // Return the data
     res.json({
-      hasCompletedForm: !!data?.response,
-      data: data?.response || null
+      hasCompletedForm: !!data.response,
+      data: data.response
     });
   } catch (error) {
     console.error('Error getting personal info:', error);
@@ -78,8 +79,6 @@ app.get('/api/personal-info/:userId', async (req, res) => {
     });
   }
 });
-
-// Keep other routes...
 
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
