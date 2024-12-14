@@ -1,5 +1,17 @@
 {
-  "dependencies": {
-    "vercel": "^39.2.2"
+  "name": "plainmed",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "medlineplusfrontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd medlineplusfrontend && npm run dev\"",
+    "build": "cd medlineplusfrontend && npm install && npm run build",
+    "start": "cd backend && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
   }
 }

@@ -2,13 +2,16 @@
   "version": 2,
   "builds": [
     {
-      "src": "medlineplusfrontend/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    },
-    {
       "src": "backend/src/handler.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "medlineplusfrontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist",
+        "buildCommand": "cd medlineplusfrontend && npm install && npm run build"
+      }
     }
   ],
   "routes": [
