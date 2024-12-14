@@ -1,40 +1,18 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "medlineplusfrontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist",
-        "buildCommand": "cd medlineplusfrontend && npm install && npm run build"
-      }
-    }
-  ],
+  "outputDirectory": "medlineplusfrontend/dist",
+  "buildCommand": "cd medlineplusfrontend && npm install && npm run build",
   "routes": [
     {
-      "src": "^/assets/(.*)",
+      "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },
     {
-      "src": "^/logo.svg",
-      "dest": "/logo.svg"
-    },
-    {
-      "src": "^/index.html",
-      "dest": "/index.html"
-    },
-    {
-      "src": "^/manifest.json",
-      "dest": "/manifest.json"
-    },
-    {
-      "src": "^/favicon.ico",
-      "dest": "/favicon.ico"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html",
-      "status": 200
+      "dest": "/index.html"
     }
   ]
 } 
