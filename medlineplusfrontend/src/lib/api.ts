@@ -8,8 +8,10 @@ const API_URL = import.meta.env.VITE_API_URL || (
 // Add a helper function for API calls
 async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
   try {
-    // Remove any double slashes in the URL except after http(s):
-    const fullUrl = `${API_URL}/${url.replace(/^\/+/, '')}`.replace(/([^:]\/)\/+/g, '$1');
+    // Ensure URL is properly formatted
+    const endpoint = url.replace(/^\/+/, '').replace(/\/+$/, '');
+    const baseUrl = API_URL.replace(/\/+$/, '');
+    const fullUrl = `${baseUrl}/${endpoint}`;
     
     console.log('Making API request to:', fullUrl);
     
@@ -212,7 +214,7 @@ export async function getPersonalInfo(userId: string): Promise<PersonalInfo | nu
   try {
     console.log('Fetching personal info for user:', userId);
     const result: PersonalInfoResponse = await fetchWithErrorHandling(
-      `${API_URL}/personal-info/${userId}`
+      `personal-info/${userId}`
     );
     console.log('Personal info response:', result);
     return result.data;
@@ -224,7 +226,7 @@ export async function getPersonalInfo(userId: string): Promise<PersonalInfo | nu
 
 export async function createPersonalInfo(data: { user_id: string } & PersonalInfo): Promise<PersonalInfo> {
   try {
-    return await fetchWithErrorHandling(`${API_URL}/personal-info`, {
+    return await fetchWithErrorHandling('personal-info', {
       method: 'POST',
       body: JSON.stringify(data),
     });
