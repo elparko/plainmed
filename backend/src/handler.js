@@ -6,11 +6,34 @@ require('dotenv').config();
 const router = express.Router();
 
 // Production CORS configuration
+const allowedOrigins = [
+  'https://plainmed.vercel.app',
+  'https://www.plainmed.vercel.app',
+  /^https:\/\/plainmed-.*\.vercel\.app$/,  // Allow all Vercel preview deployments
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
+
 const corsOptions = {
-  origin: [
-    'https://plainmed.vercel.app',
-    'https://www.plainmed.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Check if the origin is allowed
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return allowedOrigin === origin;
+    });
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('Origin not allowed by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Origin'],
@@ -31,14 +54,32 @@ router.use((req, res, next) => {
 
 // Global middleware for API routes
 router.use((req, res, next) => {
-  // Ensure JSON content type for all API responses
+  const origin = req.headers.origin;
+  
+  // Check if the origin is allowed
+  const isAllowed = allowedOrigins.some(allowedOrigin => {
+    if (allowedOrigin instanceof RegExp) {
+      return allowedOrigin.test(origin);
+    }
+    return allowedOrigin === origin;
+  });
+
+  // Set CORS headers based on the origin
   res.set({
     'Content-Type': 'application/json',
     'Cache-Control': 'no-store',
     'Pragma': 'no-cache',
-    'Access-Control-Allow-Origin': 'https://plainmed.vercel.app',
-    'Access-Control-Allow-Credentials': 'true'
+    'Access-Control-Allow-Origin': isAllowed ? origin : 'https://plainmed.vercel.app',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, Origin'
   });
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).json({ message: 'OK' });
+  }
+
   next();
 });
 
