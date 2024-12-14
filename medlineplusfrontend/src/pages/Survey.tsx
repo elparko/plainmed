@@ -13,7 +13,6 @@ export function Survey() {
     console.log('handleMedicalHistoryComplete called with data:', data);
     try {
       if (!data.conditions || data.conditions.length === 0) {
-        console.error('No conditions in data');
         toast.error(language === 'Spanish' ? 
           'Por favor seleccione al menos una condición' : 
           'Please select at least one condition'
@@ -21,18 +20,18 @@ export function Survey() {
         return;
       }
 
-      console.log('Conditions to save:', data.conditions);
-
-      // Add a small delay to ensure the data is saved
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Use the SurveyContext to save the data
+      const success = await saveSurveyResponse('medical_history', data);
       
-      console.log('Navigating to medical history view');
-      navigate('/medical-history', { replace: true });
-      
-      toast.success(language === 'Spanish' ? 
-        'Historia médica guardada exitosamente' : 
-        'Medical history saved successfully'
-      );
+      if (success) {
+        navigate('/medical-history', { replace: true });
+        toast.success(language === 'Spanish' ? 
+          'Historia médica guardada exitosamente' : 
+          'Medical history saved successfully'
+        );
+      } else {
+        throw new Error('Failed to save survey response');
+      }
     } catch (error) {
       console.error('Error in handleMedicalHistoryComplete:', error);
       toast.error(language === 'Spanish' ? 

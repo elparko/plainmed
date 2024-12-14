@@ -29,36 +29,33 @@ export const searchMedicalConditions = async (query: string, language: string = 
       method: 'GET',
       headers: {
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
       },
       credentials: 'include',
     });
     
-    console.log('Search response status:', response.status);
-    console.log('Search response headers:', Object.fromEntries(response.headers.entries()));
-    
+    if (response.status === 404) {
+      return { results: [] };
+    }
+
     if (!response.ok) {
-      if (response.status === 404) {
-        return { results: [] };
-      }
-      const errorText = await response.text();
-      console.error('Search failed:', response.status, errorText);
-      throw new Error(`Search failed: ${response.status} ${errorText}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
-    const contentType = response.headers.get('content-type');
-    console.log('Response content type:', contentType);
-    
-    if (contentType && !contentType.toLowerCase().includes('json')) {
-      console.error('Invalid content type:', contentType);
-      const responseText = await response.text();
-      console.error('Response body:', responseText);
-      throw new Error('Invalid response format from server');
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse JSON response:', parseError);
+      throw new Error('Invalid JSON response from server');
     }
-    
-    const data = await response.json();
-    return {
-      results: Array.isArray(data.results) ? data.results : []
-    };
+
+    if (!data || !Array.isArray(data.results)) {
+      console.error('Invalid response structure:', data);
+      return { results: [] };
+    }
+
+    return { results: data.results };
   } catch (error) {
     console.error('Error searching conditions:', error);
     return { results: [] };
