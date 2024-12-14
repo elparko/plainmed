@@ -19,20 +19,21 @@ export const searchMedicalConditions = async (query: string, language: string = 
       return { results: [] };
     }
 
-    console.log('Fetching from:', `${API_URL}/search`);
+    const params = new URLSearchParams({
+      query: encodeURIComponent(query),
+      language: encodeURIComponent(language),
+      n_results: n_results.toString()
+    });
 
-    const response = await fetch(`${API_URL}/search`, {
-      method: 'POST',
+    const url = `${API_URL}/search?${params}`;
+    console.log('Fetching from:', url);
+
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
       },
       credentials: 'include',
-      body: JSON.stringify({
-        query,
-        language,
-        n_results
-      })
     });
     
     console.log('Response status:', response.status);
@@ -46,13 +47,6 @@ export const searchMedicalConditions = async (query: string, language: string = 
       const errorText = await response.text();
       console.error('Server response:', errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      const text = await response.text();
-      console.error('Received non-JSON response:', text);
-      return { results: [] };
     }
 
     let data;
