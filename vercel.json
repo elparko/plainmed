@@ -12,19 +12,29 @@
   ],
   "routes": [
     {
-      "src": "/assets/(.*)",
+      "src": "^/assets/(.*)",
       "dest": "/assets/$1"
     },
     {
-      "src": "/logo.svg",
+      "src": "^/logo.svg",
       "dest": "/logo.svg"
     },
     {
-      "handle": "filesystem"
+      "src": "^/index.html",
+      "dest": "/index.html"
+    },
+    {
+      "src": "^/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "^/favicon.ico",
+      "dest": "/favicon.ico"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/index.html",
+      "status": 200
     }
   ]
 } 
