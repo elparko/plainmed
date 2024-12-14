@@ -76,21 +76,29 @@ export const searchMedicalConditions = async (
       method: 'GET',
       headers: {
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
       },
       credentials: 'include',
     });
     
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers.get('content-type'));
-
-    if (response.status === 404) {
-      return { results: [] };
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorMessage = '';
+      
+      if (contentType?.includes('application/json')) {
+        const errorData = await response.json();
+        errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      } else {
+        errorMessage = await response.text();
+      }
+      
+      console.error('Server error:', errorMessage);
+      throw new Error(errorMessage);
     }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Server response:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      throw new Error(`Expected JSON response but got ${contentType}`);
     }
 
     const data: SearchResponse = await response.json();
@@ -115,6 +123,7 @@ export const searchMedicalConditions = async (
       primary_institute: result.primary_institute
     }));
 
+    console.log('Formatted results:', formattedResults);
     return { results: formattedResults };
   } catch (error) {
     console.error('Error searching conditions:', error);
