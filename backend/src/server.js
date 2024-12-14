@@ -2,7 +2,7 @@ const app = require('./handler');
 const express = require('express');
 const path = require('path');
 
-// Error handling middleware for API routes
+// API error handling middleware
 app.use('/api/*', (err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
@@ -16,22 +16,22 @@ if (process.env.NODE_ENV === 'production') {
   // Serve static files
   app.use(express.static(path.join(__dirname, '../dist')));
   
-  // Important: Handle API routes BEFORE the SPA catch-all
-  app.get('/api/*', (req, res) => {
-    // If we get here, it means no API route was matched
-    res.status(404).json({ error: 'API endpoint not found' });
-  });
-
   // SPA catch-all route - must be last
-  app.get('*', (req, res) => {
-    // Explicitly exclude API routes
+  app.get('*', (req, res, next) => {
+    // Only handle non-API routes
     if (!req.url.startsWith('/api/')) {
       res.sendFile(path.join(__dirname, '../dist/index.html'));
+    } else {
+      next(); // Let API routes be handled by the handler
     }
   });
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`API URL: ${process.env.NODE_ENV === 'production' ? process.env.PRODUCTION_URL : 'http://localhost:' + PORT}`);
+  console.log('Environment:', process.env.NODE_ENV);
+});
 
 module.exports = app; 

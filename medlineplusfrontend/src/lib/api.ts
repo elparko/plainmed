@@ -1,13 +1,22 @@
+// Get the API URL from environment variables with fallback
 const API_URL = process.env.VITE_API_URL || (
   process.env.NODE_ENV === 'production' 
-    ? 'https://plainmed.vercel.app/api'
-    : 'http://localhost:3000/api'
+    ? 'https://api.plainmed.vercel.app'  // Update this to your actual API domain
+    : 'http://localhost:3000'
 );
 
 // Add a helper function for API calls
 async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
   try {
-    const response = await fetch(url, {
+    // Add a trailing slash to the API_URL if needed
+    const baseUrl = API_URL.endsWith('/') ? API_URL : `${API_URL}/`;
+    const fullUrl = url.startsWith('/api') 
+      ? url.replace('/api', baseUrl)
+      : `${baseUrl}${url}`;
+    
+    console.log('Making API request to:', fullUrl);
+    
+    const response = await fetch(fullUrl, {
       ...options,
       credentials: 'include',
       headers: {
@@ -18,6 +27,8 @@ async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
     });
 
     const contentType = response.headers.get('content-type');
+    console.log('Response content type:', contentType);
+    console.log('Response status:', response.status);
     
     if (!response.ok) {
       let errorMessage = `HTTP error! status: ${response.status}`;
@@ -26,19 +37,24 @@ async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } else {
-          errorMessage = await response.text() || errorMessage;
+          const text = await response.text();
+          console.error('Unexpected response:', text);
+          errorMessage = text || errorMessage;
         }
-      } catch {
-        // If parsing fails, use the default error message
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
       }
       throw new Error(errorMessage);
     }
 
     if (!contentType?.includes('application/json')) {
+      console.error('Unexpected content type:', contentType);
       throw new Error(`Expected JSON response but got ${contentType}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log('API response data:', data);
+    return data;
   } catch (error) {
     console.error('API call failed:', error);
     throw error;
