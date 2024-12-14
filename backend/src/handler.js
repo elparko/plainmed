@@ -30,7 +30,7 @@ app.use((req, res, next) => {
 });
 
 // Global middleware for API routes
-app.use('/api', (req, res, next) => {
+app.use((req, res, next) => {
   res.set({
     'Content-Type': 'application/json',
     'Cache-Control': 'no-store',
@@ -66,13 +66,12 @@ async function testDatabaseConnection() {
 
 testDatabaseConnection();
 
-// API Routes
+// API Routes - all routes should be prefixed with /api
 app.get('/api/personal-info/:userId', async (req, res) => {
   const { userId } = req.params;
   console.log(`Fetching personal info for user ${userId}`);
   
   try {
-    // First try to get existing data
     const { data, error } = await supabase
       .from('survey_responses')
       .select('*')
@@ -143,7 +142,12 @@ app.post('/api/personal-info', async (req, res) => {
 
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'API endpoint not found' });
+  console.log('API 404:', req.method, req.url);
+  res.status(404).json({ 
+    error: 'API endpoint not found',
+    path: req.url,
+    method: req.method
+  });
 });
 
 module.exports = app; 
