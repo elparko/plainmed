@@ -19,27 +19,40 @@ export const searchMedicalConditions = async (query: string, language: string = 
       return { results: [] };
     }
 
-    const queryParams = new URLSearchParams({
-      query,
-      language,
-      n_results: n_results.toString()
-    }).toString();
+    console.log('Fetching from:', `${API_URL}/search`);
 
-    const response = await fetch(`${API_URL}/search?${queryParams}`, {
-      method: 'GET',
+    const response = await fetch(`${API_URL}/search`, {
+      method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
       credentials: 'include',
+      body: JSON.stringify({
+        query,
+        language,
+        n_results
+      })
     });
     
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers.get('content-type'));
+
     if (response.status === 404) {
       return { results: [] };
     }
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Server response:', errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      const text = await response.text();
+      console.error('Received non-JSON response:', text);
+      return { results: [] };
     }
 
     let data;
@@ -47,7 +60,7 @@ export const searchMedicalConditions = async (query: string, language: string = 
       data = await response.json();
     } catch (parseError) {
       console.error('Failed to parse JSON response:', parseError);
-      throw new Error('Invalid JSON response from server');
+      return { results: [] };
     }
 
     if (!data || !Array.isArray(data.results)) {
